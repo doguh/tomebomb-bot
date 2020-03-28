@@ -82,6 +82,9 @@ export default class Game {
   };
 
   start = () => {
+    if (this.players.length < 5) {
+      return this.channel.send("Faut au moins 5 personnes pour jouer :(");
+    }
     this.started = true;
     this.beginNewTurn();
   };
@@ -221,8 +224,10 @@ export default class Game {
     }
 
     this.cardsCutThisTurn++;
-    this.currentPlayer = target;
     const [card] = target.cards.splice(index, 1);
+    this.currentPlayer.stats.cut.push(card);
+    target.stats.discovered.push(card);
+
     this.channel.send(
       `@${user.username} coupe un fil chez @${target.user.username}...`
     );
@@ -231,29 +236,48 @@ export default class Game {
       this.cardsFound++;
     }
 
+    this.currentPlayer = target;
+
     setTimeout(() => {
+      this.channel.send(`La carte coupée était : ${cardToString(card)} !`);
+
       if (card === Card.BOMB) {
-        this.channel.send(
-          `La carte coupée était : ${cardToString(card)} ! GG les Rouges 👿`
-        );
-        return this.reset();
+        return this.finish("GG les Rouges 👿");
+      } else if (this.cardsFound >= this.players.length) {
+        return this.finish("Les Bleus ont gagné GG ! 🙌");
+      }
+
+      if (this.cardsCutThisTurn >= this.players.length) {
+        setTimeout(() => {
+          this.beginNewTurn();
+        }, 1000);
       } else {
         this.channel.send(
-          `La carte coupée était : ${cardToString(card)} ! (encore ${this
-            .players.length - this.cardsCutThisTurn} cartes à couper ce tour)`
+          `Encore ${this.players.length -
+            this.cardsCutThisTurn} cartes à couper ce tour`
         );
-        if (this.cardsFound >= this.players.length) {
-          this.channel.send("Les Bleus ont gagné GG ! 🙌");
-          return this.reset();
-        }
       }
     }, 1000);
+  };
 
-    if (this.cardsCutThisTurn >= this.players.length) {
-      setTimeout(() => {
-        this.beginNewTurn();
-      }, 2000);
-    }
+  finish = message => {
+    this.channel.send(`\n${message}\n\n${this.getRecap()}`);
+    this.reset();
+  };
+
+  getRecap = () => {
+    return `Résumé de la partie :\n${this.players
+      .map(
+        player =>
+          `${player.user.username} : Team ${
+            player.color === Color.BLUE ? "Bleue" : "Rouge"
+          }\n - Cartes coupées : ${player.stats.cut
+            .map(cardToString)
+            .join(" ")}\n - Cartes découvertes : ${player.stats.discovered
+            .map(cardToString)
+            .join(" ")}`
+      )
+      .join("\n")}`;
   };
 
   handleMessage = (msg: Message) => {
