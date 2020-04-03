@@ -93,7 +93,7 @@ export default class Game {
     this.channel.send(
       `Nombre de fils trouvés : ${this.cardsFound}\n` +
         `Fils restants à couper ce tour : ${this.players.length -
-          this.cardsCutThisTurn}` +
+          this.cardsCutThisTurn}\n` +
         this.players
           .map(
             player =>
